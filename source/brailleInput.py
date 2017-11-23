@@ -3,7 +3,7 @@
 #A part of NonVisual Desktop Access (NVDA)
 #This file is covered by the GNU General Public License.
 #See the file COPYING for more details.
-#Copyright (C) 2012-2016 NV Access Limited, Rui Batista
+#Copyright (C) 2012-2017 NV Access Limited, Rui Batista, Babbage B.V.
 
 import os.path
 import time
@@ -364,7 +364,7 @@ class BrailleInputHandler(AutoPropertyObject):
 
 	def emulateKey(self, key, withModifiers=True):
 		if withModifiers:
-			keys = self.currentModifiers.copy()
+			keys = self.getCurrentModifiersForNextEmulation()
 			gesture = "+".join(keys)+"+"+key
 		else:
 			gesture = key
@@ -385,6 +385,12 @@ class BrailleInputHandler(AutoPropertyObject):
 				input.ii.ki.dwFlags = winUser.KEYEVENTF_UNICODE|direction
 				inputs.append(input)
 		winUser.SendInput(inputs)
+
+	def getCurrentModifiersForNextEmulation(self):
+		"""Returns the current modifiers being held and releases them afterwards."""
+		mods = self.currentModifiers.copy()
+		self.currentModifiers.clear()
+		return mods
 
 	def handleGainFocus(self, obj):
 		# Clear all state when the focus changes.
