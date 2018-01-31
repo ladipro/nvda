@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 #core.py
 #A part of NonVisual Desktop Access (NVDA)
-#Copyright (C) 2006-2017 NV Access Limited, Aleksey Sadovoy, Christopher Toth, Joseph Lee, Peter Vágner, Derek Riemer, Babbage B.V.
+#Copyright (C) 2006-2018 NV Access Limited, Aleksey Sadovoy, Christopher Toth, Joseph Lee, Peter Vágner, Derek Riemer, Babbage B.V., Zahari Yurukov
 #This file is covered by the GNU General Public License.
 #See the file COPYING for more details.
 
@@ -467,6 +467,9 @@ This initializes all modules such as audio, IAccessible, keyboard, mouse, and GU
 	else:
 		log.debug("initializing updateCheck")
 		updateCheck.initialize()
+		# Execute pending update if desired.
+		if not globalVars.appArgs.launcher and config.conf["update"]["startupNotification"] and updateCheck.isPendingUpdate() and updateCheck.askInstallUpdateNow():
+			updateCheck.executeUpdate()
 	log.info("NVDA initialized")
 
 	log.debug("entering wx application main loop")
