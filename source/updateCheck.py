@@ -113,6 +113,7 @@ def getPendingUpdate():
 	try:
 		pendingUpdateFile=state["pendingUpdateFile"]
 	except KeyError:
+		state["pendingUpdateFile"] = state["pendingUpdateVersion"] = None
 		return None
 	else:
 		if pendingUpdateFile and os.path.isfile(pendingUpdateFile):
@@ -141,7 +142,7 @@ def executeUpdate(destPath=None):
 	else:
 		portablePath = os.getcwdu()
 		if os.access(portablePath, os.W_OK):
-			executeParams = u"--create-portable --portable-path {portablePath} --config-path {configPath} -m".format(
+			executeParams = u'--create-portable --portable-path "{portablePath}" --config-path "{configPath}" -m'.format(
 				portablePath=portablePath,
 				configPath=os.path.abspath(globalVars.appArgs.configPath)
 			)
@@ -583,7 +584,8 @@ def initialize():
 		}
 
 	# check the pending version against the current version
-	if state["pendingUpdateVersion"] == versionInfo.version:
+	# and make sure that pendingUpdateFile and pendingUpdateVersion are part of the state dictionary.
+	if "pendingUpdateVersion" not in state or state["pendingUpdateVersion"] == versionInfo.version:
 		state["pendingUpdateFile"] = state["pendingUpdateVersion"] = None
 	# remove all update files except the one that is currently pending (if any)
 	try:
