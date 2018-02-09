@@ -274,8 +274,8 @@ class MultiCategorySettingsDialog(SettingsDialog):
 			raise MultiCategorySettingsDialog.CategoryUnavailableError("The provided initial category is not a part of this dialog")
 		self.initialCategory = initialCategory
 		self.currentCategory = None
+		# dictionary key is index of category in self.catList, value is the instance. Partially filled, check for KeyError
 		self.catIdToInstanceMap = {}
-		self.catIdToClassMap = {}
 		super(MultiCategorySettingsDialog, self).__init__(parent)
 
 	# maximum size for the dialog. This size was chosen as a medium fit, so the
@@ -310,14 +310,12 @@ class MultiCategorySettingsDialog(SettingsDialog):
 		self.containerSizer = wx.BoxSizer(wx.VERTICAL)
 		self.container.SetSizer(self.containerSizer)
 
-		catId = 0
 		for cls in self.categoryClasses:
 			if not issubclass(cls,SettingsPanel):
 				raise RuntimeError("Invalid category class %s provided in %s.categoryClasses"%(cls.__name__,self.__class__.__name__))
-			self.catIdToClassMap[catId] = cls
-			self.catIdToInstanceMap[catId] = None
+			# It's important here that the listItems are added to catListCtrl in the same order that they exist in categoryClasses.
+			# the ListItem index / Id is used to index categoryClasses, and used as the key in catIdToInstanceMap
 			self.catListCtrl.Append((cls.title,))
-			catId +=1
 
 		gridBagSizer=wx.GridBagSizer(hgap=guiHelper.SPACE_BETWEEN_BUTTONS_HORIZONTAL, vgap=guiHelper.SPACE_BETWEEN_BUTTONS_VERTICAL)
 		# add the label, the categories list, and the settings panel to a 2 by 2 grid.
@@ -334,15 +332,14 @@ class MultiCategorySettingsDialog(SettingsDialog):
 		self.Bind(EVT_RW_LAYOUT_NEEDED, self._onPanelLayoutChanged)
 
 	def _getCategoryPanel(self, catId, catTitle):
-		panel = None
-		cls = None
 		try:
 			panel = self.catIdToInstanceMap[catId]
-			cls = self.catIdToClassMap[catId]
 		except KeyError:
-			log.error("unknown panel category id: {} for category title {}".format(catId, catTitle))
-			return None
-		if not panel:
+			try:
+				cls = self.categoryClasses[catId]
+			except KeyError:
+				log.error("unknown panel category id: {} for category title {}".format(catId, catTitle))
+				return None
 			panel = cls(parent=self.container)
 			panel.Hide()
 			self.containerSizer.Add(panel, flag=wx.ALL, border=guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
@@ -385,7 +382,7 @@ class MultiCategorySettingsDialog(SettingsDialog):
 			index = self.catListCtrl.GetFirstSelected()
 			newIndex=index-1 if evt.ShiftDown() else index+1
 			# Less than first wraps to the last index, greater than last wraps to first index.
-			newIndex=newIndex % len(self.catIdToInstanceMap)
+			newIndex=newIndex % self.catListCtrl.ItemCount
 			self.catListCtrl.Select(newIndex)
 			# we must focus the category list to trigger the change of category.
 			self.catListCtrl.Focus(newIndex)
@@ -435,21 +432,18 @@ class MultiCategorySettingsDialog(SettingsDialog):
 
 	def onOk(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-			if panel:
 				panel.onSave()
 				panel.Destroy()
 		super(MultiCategorySettingsDialog,self).onOk(evt)
 
 	def onCancel(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-			if panel:
 				panel.onDiscard()
 				panel.Destroy()
 		super(MultiCategorySettingsDialog,self).onCancel(evt)
 
 	def onApply(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-			if panel:
 				panel.onSave()
 		super(MultiCategorySettingsDialog,self).onApply(evt)
 
