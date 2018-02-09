@@ -331,15 +331,13 @@ class MultiCategorySettingsDialog(SettingsDialog):
 		self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
 		self.Bind(EVT_RW_LAYOUT_NEEDED, self._onPanelLayoutChanged)
 
-	def _getCategoryPanel(self, catId, catTitle):
-		try:
-			panel = self.catIdToInstanceMap[catId]
-		except KeyError:
+	def _getCategoryPanel(self, catId):
+		panel = self.catIdToInstanceMap.get(catId, None)
+		if not panel:
 			try:
 				cls = self.categoryClasses[catId]
 			except KeyError:
-				log.error("unknown panel category id: {} for category title {}".format(catId, catTitle))
-				return None
+				raise ValueError("Unable to create panel for unknown category ID: {}".format(catId))
 			panel = cls(parent=self.container)
 			panel.Hide()
 			self.containerSizer.Add(panel, flag=wx.ALL, border=guiHelper.SPACE_BETWEEN_ASSOCIATED_CONTROL_HORIZONTAL)
@@ -402,14 +400,12 @@ class MultiCategorySettingsDialog(SettingsDialog):
 		# erase the old contents and must be redrawn
 		self.container.Refresh()
 
-	def _doCategoryChange(self, oldCat, newCatId, newCatTitle):
+	def _doCategoryChange(self, oldCat, newCatId):
 		# Freeze and Thaw are called to stop visual artefacts while the GUI
 		# is being rebuilt. Without this, the controls can sometimes be seen being
 		# added.
 		self.container.Freeze()
-		newCat = self._getCategoryPanel(newCatId, newCatTitle)
-		if not newCat:
-			return
+		newCat = self._getCategoryPanel(newCatId)
 		if oldCat:
 			oldCat.onPanelDeactivated()
 		self.currentCategory = newCat
@@ -425,26 +421,29 @@ class MultiCategorySettingsDialog(SettingsDialog):
 
 	def onCategoryChange(self,evt):
 		index = evt.GetIndex()
-		newCatTitle = self.catListCtrl.GetItemText(index)
 		oldCat = self.currentCategory
-		if not oldCat or oldCat.title != newCatTitle:
-			self._doCategoryChange(oldCat, index, newCatTitle)
+		if not oldCat or index != self.categoryClasses.index(oldCat.__class__):
+			try:
+				self._doCategoryChange(oldCat, index)
+			except ValueError as e:
+				newCatTitle = self.catListCtrl.GetItemText(index)
+				log.error("Unable to change to category: {}".format(newCatTitle), exc_info=e)
 
 	def onOk(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-				panel.onSave()
-				panel.Destroy()
+			panel.onSave()
+			panel.Destroy()
 		super(MultiCategorySettingsDialog,self).onOk(evt)
 
 	def onCancel(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-				panel.onDiscard()
-				panel.Destroy()
+			panel.onDiscard()
+			panel.Destroy()
 		super(MultiCategorySettingsDialog,self).onCancel(evt)
 
 	def onApply(self,evt):
 		for panel in self.catIdToInstanceMap.itervalues():
-				panel.onSave()
+			panel.onSave()
 		super(MultiCategorySettingsDialog,self).onApply(evt)
 
 class GeneralSettingsPanel(SettingsPanel):
