@@ -336,7 +336,7 @@ class MultiCategorySettingsDialog(SettingsDialog):
 		if not panel:
 			try:
 				cls = self.categoryClasses[catId]
-			except KeyError:
+			except IndexError:
 				raise ValueError("Unable to create panel for unknown category ID: {}".format(catId))
 			panel = cls(parent=self.container)
 			panel.Hide()
