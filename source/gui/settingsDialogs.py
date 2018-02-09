@@ -615,7 +615,7 @@ class SpeechSettingsPanel(SettingsPanel):
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
 		# Translators: A label for the synthesizer on the speech panel.
-		synthLabel = _("&Synthesizer:")
+		synthLabel = _("&Synthesizer")
 		synthGroup = guiHelper.BoxSizerHelper(self, sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=synthLabel), wx.HORIZONTAL))
 		settingsSizerHelper.addItem(synthGroup)
 
@@ -1910,7 +1910,7 @@ class BrailleSettingsPanel(SettingsPanel):
 	def makeSettings(self, settingsSizer):
 		settingsSizerHelper = guiHelper.BoxSizerHelper(self, sizer=settingsSizer)
 		# Translators: A label for the braille display on the braille panel.
-		displayLabel = _("Braille &display:")
+		displayLabel = _("Braille &display")
 		displayGroup = guiHelper.BoxSizerHelper(self, sizer=wx.StaticBoxSizer(wx.StaticBox(self, label=displayLabel), wx.HORIZONTAL))
 		settingsSizerHelper.addItem(displayGroup)
 		
