@@ -135,7 +135,6 @@ def executeUpdate(destPath=None):
 		return
 	state["pendingUpdateFile"]=None
 	state["pendingUpdateVersion"]=None
-	state["removeFile"] = destPath
 	saveState()
 	if config.isInstalledCopy():
 		executeParams = u"--install -m"
@@ -216,12 +215,15 @@ class AutoUpdateChecker(UpdateChecker):
 
 	def __init__(self):
 		self._checkTimer = wx.PyTimer(self.check)
-		# Set the initial check based on the last check time.
-		# #3260: If the system time is earlier than the last check,
-		# treat the last check as being right now (so the next will be tomorrow).
-		secsSinceLast = max(time.time() - state["lastCheck"], 0)
-		# The maximum time till the next check is CHECK_INTERVAL.
-		secsTillNext = CHECK_INTERVAL - int(min(secsSinceLast, CHECK_INTERVAL))
+		if config.conf["update"]["startupNotification"] and isPendingUpdate():
+			secsTillNext = 0 # Display the update message instantly
+		else:
+			# Set the initial check based on the last check time.
+			# #3260: If the system time is earlier than the last check,
+			# treat the last check as being right now (so the next will be tomorrow).
+			secsSinceLast = max(time.time() - state["lastCheck"], 0)
+			# The maximum time till the next check is CHECK_INTERVAL.
+			secsTillNext = CHECK_INTERVAL - int(min(secsSinceLast, CHECK_INTERVAL))
 		self._checkTimer.Start(secsTillNext * 1000, True)
 
 	def terminate(self):
@@ -242,7 +244,7 @@ class AutoUpdateChecker(UpdateChecker):
 	def _result(self, info):
 		if not info:
 			return
-		if info["version"] in (state["dontRemindVersion"],state["pendingUpdateVersion"]):
+		if info["version"]==state["dontRemindVersion"]:
 			return
 		wx.CallAfter(UpdateResultDialog, gui.mainFrame, info, True)
 
@@ -352,11 +354,10 @@ class UpdateAskInstallDialog(wx.Dialog):
 		self.Sizer = mainSizer
 		mainSizer.Fit(self)
 		self.Center(wx.BOTH | wx.CENTER_ON_SCREEN)
-		self.Show()
 
 	def onInstallButton(self, evt):
 		executeUpdate(self.destPath)
-		self.Destroy()
+		self.EndModal(wx.ID_OK)
 
 	def onPostponeButton(self, evt):
 		finalDest=os.path.join(storeUpdatesDir, os.path.basename(self.destPath))
@@ -373,7 +374,7 @@ class UpdateAskInstallDialog(wx.Dialog):
 		state["pendingUpdateFile"]=finalDest
 		state["pendingUpdateVersion"]=self.version
 		saveState()		
-		self.Destroy()
+		self.EndModal(wx.ID_CLOSE)
 
 class UpdateDownloader(object):
 	"""Download and start installation of an updated version of NVDA, presenting appropriate user interface.
@@ -510,7 +511,7 @@ class UpdateDownloader(object):
 
 	def _downloadSuccess(self):
 		self._stopped()
-		wx.CallAfter(UpdateAskInstallDialog, gui.mainFrame, self.destPath, self.version)
+		gui.runScriptModalDialog(UpdateAskInstallDialog(gui.mainFrame, self.destPath, self.version))
 
 class DonateRequestDialog(wx.Dialog):
 	# Translators: The message requesting donations from users.
@@ -597,7 +598,7 @@ def initialize():
 	except OSError:
 		log.warning("Unable to remove old update file %s"%f, exc_info=True)
 
-	if config.conf["update"]["autoCheck"] and not globalVars.appArgs.launcher:
+	if not globalVars.appArgs.launcher and (config.conf["update"]["autoCheck"] or (config.conf["update"]["startupNotification"] and isPendingUpdate())):
 		autoChecker = AutoUpdateChecker()
 
 def terminate():
